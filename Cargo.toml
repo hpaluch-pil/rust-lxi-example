@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 clap = { version =  "3.1", features = ["derive"] }
 
+[target.x86_64-pc-windows-msvc]
+rustc-link-search = ['native=C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Lib\MSC']
