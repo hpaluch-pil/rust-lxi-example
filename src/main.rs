@@ -17,8 +17,23 @@ struct LxiAppArgs {
     card_slot: u32,
 }
 
+// Wrapper for:
+//   DWORD PICMLX_API PICMLX_GetVersion(void);
+// Build Time:
+// - C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Include\Picmlx.h
+// - C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Lib\MSC\Picmlx_w64.lib
+// Run Time
+// C:\Windows\System32\Picmlx_w64.dll
+
+#[link(name = "Picmlx_w64")]
+extern {
+    fn PICMLX_GetVersion() -> u32;
+}
+
 fn main() {
     let lxi_app_args = LxiAppArgs::parse();
+    let picmlx_ver = unsafe { PICMLX_GetVersion() };
+    println!("Picmlx Raw Version is: {}",picmlx_ver);
     println!("Mock: Connecting to LXI on {}...",lxi_app_args.lxi_address);
     println!("Mock: Opening Card at Bus={} Slot={}",
              lxi_app_args.card_bus,lxi_app_args.card_slot);
