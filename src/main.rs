@@ -25,7 +25,6 @@ struct LxiAppArgs {
 // Run Time
 // C:\Windows\System32\Picmlx_w64.dll
 
-#[link(name = "Picmlx_w64")]
 extern {
     fn PICMLX_GetVersion() -> u32;
 }

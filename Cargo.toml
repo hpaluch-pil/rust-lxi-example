@@ -2,11 +2,9 @@
 name = "rust-lxi-example"
 version = "0.1.0"
 edition = "2021"
+links = "picmlx"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 clap = { version =  "3.1", features = ["derive"] }
-
-[target.x86_64-pc-windows-msvc]
-rustc-link-search = ['native=C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Lib\MSC']
