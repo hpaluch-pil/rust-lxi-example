@@ -29,6 +29,8 @@ struct LxiAppArgs {
 // C:\Windows\System32\Picmlx_w64.dll
 
 extern "C" {
+    // Functions from:
+    // - C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Include\Picmlx.h
     // DWORD PICMLX_API PICMLX_GetVersion(void);
     fn PICMLX_GetVersion() -> u32;
     // DWORD PICMLX_API PICMLX_Connect(DWORD Board,const LPCHAR Address,DWORD Port,DWORD Timeout,LPSESSION SID);
@@ -36,6 +38,13 @@ extern "C" {
                       timeout: u32, sid:*mut c_long) -> u32;
     // DWORD PICMLX_API PICMLX_Disconnect(SESSION SID);
     fn PICMLX_Disconnect(sid:c_long) -> u32;
+
+    // Functions from:
+    // - C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Include\Piplx.h
+    // DWORD PIPLX_API PIPLX_OpenSpecifiedCard(SESSION Sid,DWORD Bus,DWORD Slot,DWORD *CardNum);
+    fn PIPLX_OpenSpecifiedCard(sid:c_long,bus:u32,slot:u32,card_num:*mut u32) -> u32;
+    // DWORD PIPLX_API PIPLX_CloseSpecifiedCard(SESSION Sid,DWORD CardNum);
+    fn PIPLX_CloseSpecifiedCard(sid:c_long,card_num:u32) -> u32;
 }
 
 // Wrapper for DWORD PICMLX_API PICMLX_GetVersion(void);
@@ -68,6 +77,28 @@ fn pil_picmlx_disconnect (sid:c_long) -> Result<(),u32> {
     }
 }
 
+// fn PIPLX_OpenSpecifiedCard(sid:c_long,bus:u32,slot:u32,card_num:*mut u32) -> u32;
+fn pil_piplx_open_specified_card(sid:c_long,bus:u32,slot:u32) -> Result<u32,u32> {
+    let mut card_num:u32 = 0;
+    let res = unsafe { PIPLX_OpenSpecifiedCard(sid,bus,slot,&mut card_num) } ;
+    if res == 0 {
+        Ok(card_num)
+    } else {
+        Err(res)
+    }
+}
+
+// fn PIPLX_CloseSpecifiedCard(sid:c_long,card_num:u32) -> u32;
+fn pil_piplx_close_specified_card(sid:c_long,card_num:u32) -> Result<(),u32> {
+    let err_code = unsafe { PIPLX_CloseSpecifiedCard(sid,card_num) };
+    if err_code == 0 {
+        Ok(())
+    } else {
+        Err(err_code)
+    }
+
+}
+
 fn main() {
     let lxi_app_args = LxiAppArgs::parse();
     let picmlx_ver = pil_picmlx_get_version();
@@ -83,10 +114,19 @@ fn main() {
             process::exit(1);
         });
     println!("Got Session: {}",sid);
-    println!("Mock: Opening Card at Bus={} Slot={}",
+    println!("Opening Card at Bus={} Slot={}",
              lxi_app_args.card_bus,lxi_app_args.card_slot);
+    let card_num = pil_piplx_open_specified_card(
+        sid,lxi_app_args.card_bus,lxi_app_args.card_slot).unwrap_or_else(|err|{
+        eprintln!("Unable to open card - error code: {}",err);
+        process::exit(1);
+    });
+    println!("Got CardNum={}",card_num);
     println!("Mock: Card ID is {}", "Fake Card ID");
-    println!("Mock: Closing card");
+    println!("Closing card with CardNum={}",card_num);
+    pil_piplx_close_specified_card(sid,card_num).unwrap_or_else(|err|{
+        eprintln!("Error closing card: {}",err);
+    });
     println!("Disconnecting from LXI...");
     pil_picmlx_disconnect(sid).unwrap_or_else(|err|{
         eprintln!("LXI Disconnect returned error {}",err);

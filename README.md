@@ -4,6 +4,7 @@ Simple example written in Rust that connects to LXI and prints `Card_ID` of spec
 
 Status:
 - successfully connects/disconnects LXI
+- and opens specified card
 
 ## Setup
 
@@ -52,10 +53,11 @@ Example output:
 ```
 Picmlx Raw Version is: 1183
 Connecting to LXI on 192.168.56.101:1024...
-Got Session: 8938
-Mock: Opening Card at Bus=1 Slot=15
+Got Session: 22448
+Opening Card at Bus=1 Slot=15
+Got CardNum=1
 Mock: Card ID is Fake Card ID
-Mock: Closing card
+Closing card with CardNum=1
 Disconnecting from LXI...
 Done, exiting...
 ```
@@ -67,3 +69,4 @@ Done, exiting...
 * DLL linking:
   * https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-link-search
   * https://doc.rust-lang.org/cargo/reference/build-script-examples.html#linking-to-system-libraries
+  * https://github.com/rust-lang/cargo/issues/4533
