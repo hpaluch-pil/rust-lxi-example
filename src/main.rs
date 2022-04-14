@@ -71,11 +71,13 @@ fn pil_picmlx_disconnect (sid:c_long) -> Result<(),u32> {
 fn main() {
     let lxi_app_args = LxiAppArgs::parse();
     let picmlx_ver = pil_picmlx_get_version();
+    const LXI_PORT: u32 = 1024;
+
     println!("Picmlx Raw Version is: {}",picmlx_ver);
-    println!("Mock: Connecting to LXI on {}...",lxi_app_args.lxi_address);
+    println!("Connecting to LXI on {}:{}...",lxi_app_args.lxi_address,LXI_PORT);
 
     let sid = pil_picmlx_connect(0,lxi_app_args.lxi_address,
-                                 1024,10000)
+                                 LXI_PORT,10000)
         .unwrap_or_else(|err|{
             eprintln!("LXI Connect returned error {}",err);
             process::exit(1);

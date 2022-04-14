@@ -3,7 +3,7 @@
 Simple example written in Rust that connects to LXI and prints `Card_ID` of specified card.
 
 Status:
-- successfully calls `PICMLX_GetVersion()`, Wow!
+- successfully connects/disconnects LXI
 
 ## Setup
 
@@ -12,6 +12,8 @@ Tested on Windows 10.
 You need to have installed:
 - latest Pickering ClientBridge/C++ library from: https://downloads.pickeringtest.info/downloads/drivers/Sys60/
 - MSVC 2019 Toolchain + Windows 10 SDK as shown on: https://rust-lang.github.io/rustup/installation/windows.html
+- Running LXI - you can use LXI Simulator that can be downloaded
+  freely from https://downloads.pickeringtest.info/downloads/LXI_Simulator/
 
 Following components were used:
 ```cmd
@@ -41,18 +43,21 @@ rem build command
 cargo build
 ```
 
-To run this program invoke:
+To run this program invoke (replace `192.168.56.101` with
+IP Address of your LXI Simulator):
 ```cmd
-cargo run -- -l 127.0.0.1 -b 2 -s 3
+cargo run -- -l 192.168.56.101 -b 1 -s 15
 ```
 Example output:
 ```
 Picmlx Raw Version is: 1183
-Mock: Connecting to LXI on 127.0.0.1...
-Mock: Opening Card at Bus=2 Slot=3
+Connecting to LXI on 192.168.56.101:1024...
+Got Session: 8938
+Mock: Opening Card at Bus=1 Slot=15
 Mock: Card ID is Fake Card ID
 Mock: Closing card
-Mock: Done, exiting...
+Disconnecting from LXI...
+Done, exiting...
 ```
 
 = Resources
