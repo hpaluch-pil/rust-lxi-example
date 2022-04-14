@@ -16,7 +16,9 @@ TODO:
 
 ## Setup
 
-Tested on Windows 10.
+Tested on Windows 10 and openSUSE LEAP 15.3
+
+### Setup: Windows
 
 You need to have installed:
 - latest Pickering ClientBridge/C++ library from: https://downloads.pickeringtest.info/downloads/drivers/Sys60/
@@ -44,7 +46,7 @@ C:\> cargo -V
 cargo 1.60.0 (d1fd9fe2c 2022-03-01)
 ```
 
-### Building application:
+### Windows: Building application:
 Open CMD and issue these commands:
 
 ```cmd
@@ -72,6 +74,55 @@ Closing card with CardNum=1
 Disconnecting from LXI...
 Done, exiting...
 ```
+
+### Setup: Linux
+
+Tested on openSUSE LEAP 15.3:
+
+You need:
+- Running LXI - you can use LXI Simulator that can be downloaded
+  freely from https://downloads.pickeringtest.info/downloads/LXI_Simulator/
+- install cargo (will also install rustc etc.):
+
+```bash
+sudo zypper in cargo
+```
+
+- install ClientBridge/C++ library for Linux:
+  - Download latest ClientBridge for Linux from (used "RedHat" for OpenSUSE):
+  - https://downloads.pickeringtest.info/downloads/drivers/Sys60/Linux/ClientBridge/RedHat/
+  - unpack downloaded version and create necessary symlinks, for example:
+
+    ```bash
+    sudo tar -xvz -C / -f ClientBridge-1.20.0.3-amd64_rhel.tar.gz ./usr/lib64
+    cd /usr/lib64/
+    sudo ln -s libpicmlx.so.1.13.1 libpicmlx.so
+    sudo ln -s libpiplx.so.1.10.0 libpiplx.so
+    ```
+
+Now back in this project directory use
+command `cargo build` to build example binary
+
+You can run this binary using command like:
+```bash
+cargo run -- -l IP_OF_LXI_SIMULATOR -b 1 -s 15
+```
+Example output:
+```
+cargo run -- -l 192.168.100.192 -b 1 -s 15
+    Finished dev [unoptimized + debuginfo] target(s) in 0.04s
+     Running `target/debug/rust-lxi-example -l 192.168.100.192 -b 1 -s 15`
+Picmlx Raw Version is: 1131
+Connecting to LXI on 192.168.100.192:1024...
+Got Session: 798931329
+Opening Card at Bus=1 Slot=15
+Got CardNum=1
+Card ID is '40-160-001,1000000,1.01'
+Closing card with CardNum=1
+Disconnecting from LXI...
+Done, exiting...
+```
+
 
 = Resources
 
