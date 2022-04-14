@@ -3,8 +3,16 @@
 Simple example written in Rust that connects to LXI and prints `Card_ID` of specified card.
 
 Status:
-- successfully connects/disconnects LXI
-- and opens specified card
+- finished:
+  - connects to LXI
+  - opens specified card
+  - prints Card ID
+  - closes Card
+  - disconnects LXI
+
+TODO:
+- error handling
+  - print messages instead of error codes
 
 ## Setup
 
@@ -27,6 +35,9 @@ info: The currently active `rustc` version is `rustc 1.60.0 (7737e0b5c 2022-04-0
 C:\> rustup toolchain list
 
 stable-x86_64-pc-windows-msvc (default)
+
+C:\> rustc -V
+rustc 1.60.0 (7737e0b5c 2022-04-04)
 
 C:\> cargo -V
  
@@ -53,10 +64,10 @@ Example output:
 ```
 Picmlx Raw Version is: 1183
 Connecting to LXI on 192.168.56.101:1024...
-Got Session: 22448
+Got Session: 30112
 Opening Card at Bus=1 Slot=15
 Got CardNum=1
-Mock: Card ID is Fake Card ID
+Card ID is '40-160-001,1000000,1.01'
 Closing card with CardNum=1
 Disconnecting from LXI...
 Done, exiting...

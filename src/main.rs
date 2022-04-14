@@ -1,6 +1,6 @@
 extern crate clap;
 
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::os::raw::{c_char,c_long};
 use std::process;
 
@@ -45,6 +45,8 @@ extern "C" {
     fn PIPLX_OpenSpecifiedCard(sid:c_long,bus:u32,slot:u32,card_num:*mut u32) -> u32;
     // DWORD PIPLX_API PIPLX_CloseSpecifiedCard(SESSION Sid,DWORD CardNum);
     fn PIPLX_CloseSpecifiedCard(sid:c_long,card_num:u32) -> u32;
+    // DWORD PIPLX_API PIPLX_CardId(SESSION Sid,DWORD CardNum,LPCHAR Str,DWORD StrLen);
+    fn PIPLX_CardId(sid:c_long,card_num:u32,str:*mut c_char,str_len:u32) -> u32;
 }
 
 // Wrapper for DWORD PICMLX_API PICMLX_GetVersion(void);
@@ -96,8 +98,28 @@ fn pil_piplx_close_specified_card(sid:c_long,card_num:u32) -> Result<(),u32> {
     } else {
         Err(err_code)
     }
-
 }
+
+fn pil_piplx_card_id(sid:c_long,card_num:u32) -> Result<String,u32> {
+
+    // output string handling from:
+    // dns-lookup-master\src\hostname.rs
+
+    let mut c_name = [0 as c_char; 256 as usize];
+    let res = unsafe {
+        PIPLX_CardId(sid,card_num,c_name.as_mut_ptr(), c_name.len() as _)
+    };
+    if res != 0 {
+        return Err(res);
+    }
+    let card_id = unsafe {
+        CStr::from_ptr(c_name.as_ptr())
+    };
+    // TODO: Proper error handling...
+    let card_id = std::str::from_utf8(card_id.to_bytes()).unwrap().to_owned();
+    Ok(card_id)
+}
+
 
 fn main() {
     let lxi_app_args = LxiAppArgs::parse();
@@ -122,7 +144,12 @@ fn main() {
         process::exit(1);
     });
     println!("Got CardNum={}",card_num);
-    println!("Mock: Card ID is {}", "Fake Card ID");
+    let card_id = pil_piplx_card_id(sid,card_num);
+    if card_id.is_ok() {
+        println!("Card ID is '{}'", card_id.unwrap());
+    } else {
+        eprintln!("Error {} getting card id",card_id.unwrap_err());
+    }
     println!("Closing card with CardNum={}",card_num);
     pil_piplx_close_specified_card(sid,card_num).unwrap_or_else(|err|{
         eprintln!("Error closing card: {}",err);
