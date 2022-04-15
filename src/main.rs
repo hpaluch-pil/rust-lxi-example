@@ -21,16 +21,14 @@ struct LxiAppArgs {
     card_slot: u32,
 }
 
-// Wrapper for:
-// Build Time:
-// - C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Include\Picmlx.h
-// - C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Lib\MSC\Picmlx_w64.lib
-// Run Time
-// C:\Windows\System32\Picmlx_w64.dll
-
 extern "C" {
     // Functions from:
     // - C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Include\Picmlx.h
+    // Build Time:
+    // - C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Lib\MSC\Picmlx_w64.lib
+    // Run Time
+    // C:\Windows\System32\Picmlx_w64.dll
+
     // DWORD PICMLX_API PICMLX_GetVersion(void);
     fn PICMLX_GetVersion() -> u32;
     // DWORD PICMLX_API PICMLX_Connect(DWORD Board,const LPCHAR Address,DWORD Port,DWORD Timeout,LPSESSION SID);
@@ -38,9 +36,16 @@ extern "C" {
                       timeout: u32, sid:*mut c_long) -> u32;
     // DWORD PICMLX_API PICMLX_Disconnect(SESSION SID);
     fn PICMLX_Disconnect(sid:c_long) -> u32;
+    // DWORD PICMLX_API PICMLX_ErrorCodeToMessage(DWORD ErrorCode,LPCHAR ErrorMsg,DWORD Length);
+    fn PICMLX_ErrorCodeToMessage(error_code:u32,error_msg:*mut c_char,msg_len:u32) -> u32;
 
     // Functions from:
     // - C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Include\Piplx.h
+    // Build Time:
+    // - C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Lib\MSC\Piplx_w64.lib
+    // Run Time
+    // C:\Windows\System32\Piplx_w64.dll
+
     // DWORD PIPLX_API PIPLX_OpenSpecifiedCard(SESSION Sid,DWORD Bus,DWORD Slot,DWORD *CardNum);
     fn PIPLX_OpenSpecifiedCard(sid:c_long,bus:u32,slot:u32,card_num:*mut u32) -> u32;
     // DWORD PIPLX_API PIPLX_CloseSpecifiedCard(SESSION Sid,DWORD CardNum);
@@ -78,6 +83,30 @@ fn pil_picmlx_disconnect (sid:c_long) -> Result<(),u32> {
         Err(err_code)
     }
 }
+
+// Wrapper for:
+// fn PICMLX_ErrorCodeToMessage(error_code:u32,error_msg:*mut c_char,msg_len:u32) -> u32;
+fn pil_picmlx_error_code_to_message(error_code:u32) -> Result<String,u32> {
+
+    // output string handling from:
+    // dns-lookup-master\src\hostname.rs
+
+    let mut c_name = [0 as c_char; 256 as usize];
+    let res = unsafe {
+        PICMLX_ErrorCodeToMessage(error_code,
+                                  c_name.as_mut_ptr(), c_name.len() as u32)
+    };
+    if res != 0 {
+        return Err(res);
+    }
+    let err_msg = unsafe {
+        CStr::from_ptr(c_name.as_ptr())
+    };
+    // TODO: Proper error handling...
+    let err_msg = std::str::from_utf8(err_msg.to_bytes()).unwrap().to_owned();
+    Ok(err_msg)
+}
+
 
 // fn PIPLX_OpenSpecifiedCard(sid:c_long,bus:u32,slot:u32,card_num:*mut u32) -> u32;
 fn pil_piplx_open_specified_card(sid:c_long,bus:u32,slot:u32) -> Result<u32,u32> {
@@ -130,9 +159,12 @@ fn main() {
     println!("Connecting to LXI on {}:{}...",lxi_app_args.lxi_address,LXI_PORT);
 
     let sid = pil_picmlx_connect(0,lxi_app_args.lxi_address,
-                                 LXI_PORT,10000)
+                                 LXI_PORT,3000)
         .unwrap_or_else(|err|{
             eprintln!("LXI Connect returned error {}",err);
+            let err_msg = pil_picmlx_error_code_to_message(err)
+                .expect("Unable to get PICMLX error message from code");
+            eprintln!("Error message: {}",err_msg);
             process::exit(1);
         });
     println!("Got Session: {}",sid);
