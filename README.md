@@ -64,6 +64,7 @@ cargo run -- -l 192.168.56.101 -b 1 -s 15
 ```
 Example output:
 ```
+Program version: 64-bit Debug
 Picmlx Raw Version is: 1183
 Connecting to LXI on 192.168.56.101:1024...
 Got Session: 30112
@@ -74,6 +75,28 @@ Closing card with CardNum=1
 Disconnecting from LXI...
 Done, exiting...
 ```
+
+### Windows: 32-bit build
+
+> It does not work - on build
+> I get mismatch of 32 and 64 bit target
+> for link.exe. Also see: https://users.rust-lang.org/t/how-to-build-both-32-and-64-bit-app-on-windows/26365
+> 
+> So please stick to 64-bit MSVC target.
+
+Experimental support. You need likely to
+add 32-bit target first using (from https://users.rust-lang.org/t/how-to-build-both-32-and-64-bit-app-on-windows/26365):
+```cmd
+rustup target add i686-pc-windows-msvc
+```
+
+And then invoke cargo with target parameter
+```cmd
+cargo build --target=i686-pc-windows-msvc
+```
+
+
+
 
 ### Setup: Linux
 
@@ -112,6 +135,7 @@ Example output:
 cargo run -- -l 192.168.100.192 -b 1 -s 15
     Finished dev [unoptimized + debuginfo] target(s) in 0.04s
      Running `target/debug/rust-lxi-example -l 192.168.100.192 -b 1 -s 15`
+Program version: 64-bit Debug
 Picmlx Raw Version is: 1131
 Connecting to LXI on 192.168.100.192:1024...
 Got Session: 798931329
@@ -132,3 +156,9 @@ Done, exiting...
   * https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-link-search
   * https://doc.rust-lang.org/cargo/reference/build-script-examples.html#linking-to-system-libraries
   * https://github.com/rust-lang/cargo/issues/4533
+* Building 32-bit MSVC Rust binary (unresolved):
+  * https://users.rust-lang.org/t/how-to-build-both-32-and-64-bit-app-on-windows/26365
+* Getting sizeof pointer:
+  * https://stackoverflow.com/questions/64982138/how-to-print-the-size-of-raw-pointer
+* How do detect Debug/Release build:
+  * https://devtip.in/39204908/how-to-check-release-debug-builds-using-cfg-in-rust

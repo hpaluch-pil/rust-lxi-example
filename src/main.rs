@@ -155,6 +155,15 @@ fn main() {
     let picmlx_ver = pil_picmlx_get_version();
     const LXI_PORT: u32 = 1024;
 
+    // How to detect Debug/Release: https://devtip.in/39204908/how-to-check-release-debug-builds-using-cfg-in-rust
+    #[cfg(debug_assertions)]
+    let build_type = "Debug";
+
+    #[cfg(not(debug_assertions))]
+    let build_type = "Release";
+
+    // sizeof pointer from: https://stackoverflow.com/a/64982586
+    println!("Program version: {}-bit {}",8*std::mem::size_of::<*const u32>(),build_type);
     println!("Picmlx Raw Version is: {}",picmlx_ver);
     println!("Connecting to LXI on {}:{}...",lxi_app_args.lxi_address,LXI_PORT);
 
