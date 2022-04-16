@@ -65,6 +65,7 @@ Example output:
 ```
 Program version: 64-bit Debug
 Picmlx Raw Version is: 1183
+Picmlx Ex Version: PicmlxVersionInfo { major: 1, minor: 18, patch: 3 }
 Connecting to LXI on 192.168.56.101:1024...
 Got Session: 30112
 Opening Card at Bus=1 Slot=15
@@ -93,9 +94,6 @@ And then invoke cargo with target parameter
 ```cmd
 cargo build --target=i686-pc-windows-msvc
 ```
-
-
-
 
 ### Setup: Linux
 
@@ -136,6 +134,7 @@ cargo run -- -l 192.168.100.192 -b 1 -s 15
      Running `target/debug/rust-lxi-example -l 192.168.100.192 -b 1 -s 15`
 Program version: 64-bit Debug
 Picmlx Raw Version is: 1131
+Picmlx Ex Version: PicmlxVersionInfo { major: 1, minor: 13, patch: 1 }
 Connecting to LXI on 192.168.100.192:1024...
 Got Session: 798931329
 Opening Card at Bus=1 Slot=15

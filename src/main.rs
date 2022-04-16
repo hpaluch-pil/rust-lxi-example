@@ -22,6 +22,15 @@ struct LxiAppArgs {
     card_slot: u32,
 }
 
+// C structure returned by PICMLX_GetVersionEx()
+#[repr(C)]
+#[derive(Clone,Debug)]
+struct PicmlxVersionInfo {
+    major:u32,
+    minor:u32,
+    patch:u32,
+}
+
 extern "C" {
     // Functions from:
     // - C:\Program Files\Pickering Interfaces Ltd\ClientBridge\Include\Picmlx.h
@@ -32,6 +41,9 @@ extern "C" {
 
     // DWORD PICMLX_API PICMLX_GetVersion(void);
     fn PICMLX_GetVersion() -> u32;
+    // VERSION_INFO PICMLX_API PICMLX_GetVersionEx();
+    fn PICMLX_GetVersionEx() -> PicmlxVersionInfo;
+
     // DWORD PICMLX_API PICMLX_Connect(DWORD Board,const LPCHAR Address,DWORD Port,DWORD Timeout,LPSESSION SID);
     fn PICMLX_Connect(board: u32, address: *const c_char, port: u32,
                       timeout: u32, sid:*mut c_long) -> u32;
@@ -205,7 +217,6 @@ fn pil_piplx_error_code_to_message(error_code:u32) -> Result<String,u32> {
 
 fn main() {
     let lxi_app_args = LxiAppArgs::parse();
-    let picmlx_ver = pil_picmlx_get_version();
     const LXI_PORT: u32 = 1024;
 
     // How to detect Debug/Release: https://devtip.in/39204908/how-to-check-release-debug-builds-using-cfg-in-rust
@@ -217,7 +228,10 @@ fn main() {
 
     // sizeof pointer from: https://stackoverflow.com/a/64982586
     println!("Program version: {}-bit {}",8*std::mem::size_of::<*const u32>(),build_type);
+    let picmlx_ver = pil_picmlx_get_version();
     println!("Picmlx Raw Version is: {}",picmlx_ver);
+    let picmlx_ex_ver = unsafe {  PICMLX_GetVersionEx() };
+    println!("Picmlx Ex Version: {:?}",picmlx_ex_ver);
     println!("Connecting to LXI on {}:{}...",lxi_app_args.lxi_address,LXI_PORT);
 
     let sid = pil_picmlx_connect(0,lxi_app_args.lxi_address,
