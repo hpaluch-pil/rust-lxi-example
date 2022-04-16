@@ -53,6 +53,8 @@ extern "C" {
     fn PIPLX_CloseSpecifiedCard(sid:c_long,card_num:u32) -> u32;
     // DWORD PIPLX_API PIPLX_CardId(SESSION Sid,DWORD CardNum,LPCHAR Str,DWORD StrLen);
     fn PIPLX_CardId(sid:c_long,card_num:u32,str:*mut c_char,str_len:u32) -> u32;
+    // DWORD PIPLX_API PIPLX_ErrorCodeToMessage(DWORD ErrorCode,LPCHAR ErrorMsg,DWORD Length);
+    fn PIPLX_ErrorCodeToMessage(error_code:u32,error_msg:*mut c_char,msg_len:u32) -> u32;
 }
 
 // *** PICMLX wrappers ***
@@ -86,19 +88,17 @@ fn pil_picmlx_connect(board: u32, address:String, port: u32, timeout: u32)
     let err_code = unsafe {
         PICMLX_Connect(board, c_address.as_ptr(), port,
                                   timeout, &mut sid) };
-    if err_code == 0 {
-        Ok(sid)
-    } else {
-        Err(PicmlxError { err_num: err_code})
+    match err_code {
+        0 => Ok(sid),
+        err => Err(PicmlxError { err_num: err})
     }
 }
 
 fn pil_picmlx_disconnect (sid:c_long) -> Result<(),PicmlxError> {
     let err_code = unsafe { PICMLX_Disconnect(sid) };
-    if err_code == 0 {
-        Ok(())
-    } else {
-        Err(PicmlxError { err_num: err_code})
+    match err_code {
+        0 => Ok(()),
+        err => Err(PicmlxError { err_num: err})
     }
 }
 
@@ -125,39 +125,51 @@ fn pil_picmlx_error_code_to_message(error_code:u32) -> Result<String,u32> {
     Ok(err_msg)
 }
 
+// *** PIPLX wrappers ***
+#[derive(Debug)]
+struct PiplxError {
+    err_num: u32,
+}
+
+impl fmt::Display for PiplxError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"PIPLX{}: ",self.err_num)?;
+        if let Ok(err_msg) = pil_piplx_error_code_to_message(self.err_num) {
+            write!(f,"{}",err_msg)
+        } else {
+            write!(f,"Unknown error code")
+        }
+    }
+}
 
 // fn PIPLX_OpenSpecifiedCard(sid:c_long,bus:u32,slot:u32,card_num:*mut u32) -> u32;
-fn pil_piplx_open_specified_card(sid:c_long,bus:u32,slot:u32) -> Result<u32,u32> {
+fn pil_piplx_open_specified_card(sid:c_long,bus:u32,slot:u32) -> Result<u32,PiplxError> {
     let mut card_num:u32 = 0;
-    let res = unsafe { PIPLX_OpenSpecifiedCard(sid,bus,slot,&mut card_num) } ;
-    if res == 0 {
-        Ok(card_num)
-    } else {
-        Err(res)
+    let err_code = unsafe { PIPLX_OpenSpecifiedCard(sid,bus,slot,&mut card_num) } ;
+    match err_code {
+        0 => Ok(card_num),
+        err => Err(PiplxError { err_num: err})
     }
 }
 
 // fn PIPLX_CloseSpecifiedCard(sid:c_long,card_num:u32) -> u32;
-fn pil_piplx_close_specified_card(sid:c_long,card_num:u32) -> Result<(),u32> {
+fn pil_piplx_close_specified_card(sid:c_long,card_num:u32) -> Result<(),PiplxError> {
     let err_code = unsafe { PIPLX_CloseSpecifiedCard(sid,card_num) };
-    if err_code == 0 {
-        Ok(())
-    } else {
-        Err(err_code)
+    match err_code {
+        0 => Ok(()),
+        err => Err(PiplxError { err_num: err})
     }
 }
 
-fn pil_piplx_card_id(sid:c_long,card_num:u32) -> Result<String,u32> {
-
+fn pil_piplx_card_id(sid:c_long,card_num:u32) -> Result<String,PiplxError> {
     // output string handling from:
     // dns-lookup-master\src\hostname.rs
-
     let mut c_name = [0 as c_char; 256 as usize];
     let res = unsafe {
         PIPLX_CardId(sid,card_num,c_name.as_mut_ptr(), c_name.len() as _)
     };
     if res != 0 {
-        return Err(res);
+        return Err(PiplxError{err_num:res});
     }
     let card_id = unsafe {
         CStr::from_ptr(c_name.as_ptr())
@@ -165,6 +177,29 @@ fn pil_piplx_card_id(sid:c_long,card_num:u32) -> Result<String,u32> {
     // TODO: Proper error handling...
     let card_id = std::str::from_utf8(card_id.to_bytes()).unwrap().to_owned();
     Ok(card_id)
+}
+
+// Wrapper for:
+// fn PIPLX_ErrorCodeToMessage(error_code:u32,error_msg:*mut c_char,msg_len:u32) -> u32;
+fn pil_piplx_error_code_to_message(error_code:u32) -> Result<String,u32> {
+
+    // output string handling from:
+    // dns-lookup-master\src\hostname.rs
+
+    let mut c_name = [0 as c_char; 256 as usize];
+    let res = unsafe {
+        PIPLX_ErrorCodeToMessage(error_code,
+                                  c_name.as_mut_ptr(), c_name.len() as u32)
+    };
+    if res != 0 {
+        return Err(res);
+    }
+    let err_msg = unsafe {
+        CStr::from_ptr(c_name.as_ptr())
+    };
+    // TODO: Proper error handling...
+    let err_msg = std::str::from_utf8(err_msg.to_bytes()).unwrap().to_owned();
+    Ok(err_msg)
 }
 
 
@@ -196,7 +231,7 @@ fn main() {
              lxi_app_args.card_bus,lxi_app_args.card_slot);
     let card_num = pil_piplx_open_specified_card(
         sid,lxi_app_args.card_bus,lxi_app_args.card_slot).unwrap_or_else(|err|{
-        eprintln!("Unable to open card - error code: {}",err);
+        eprintln!("Unable to open card: {}",err);
         process::exit(1);
     });
     println!("Got CardNum={}",card_num);

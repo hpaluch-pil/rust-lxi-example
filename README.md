@@ -11,8 +11,7 @@ Status:
   - disconnects LXI
 
 TODO:
-- error handling
-  - print messages instead of error codes
+- test autoclosing (Drop)
 
 ## Setup
 
