@@ -1,6 +1,7 @@
 extern crate clap;
 
 use std::ffi::{CStr, CString};
+use std::fmt;
 use std::os::raw::{c_char,c_long};
 use std::process;
 
@@ -54,13 +55,30 @@ extern "C" {
     fn PIPLX_CardId(sid:c_long,card_num:u32,str:*mut c_char,str_len:u32) -> u32;
 }
 
+// *** PICMLX wrappers ***
+#[derive(Debug)]
+struct PicmlxError {
+    err_num: u32,
+}
+
+impl fmt::Display for PicmlxError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"PICMLX{}: ",self.err_num)?;
+        if let Ok(err_msg) = pil_picmlx_error_code_to_message(self.err_num) {
+            write!(f,"{}",err_msg)
+        } else {
+            write!(f,"Unknown error code")
+        }
+    }
+}
+
 // Wrapper for DWORD PICMLX_API PICMLX_GetVersion(void);
 fn pil_picmlx_get_version() -> u32 {
     unsafe { PICMLX_GetVersion() }
 }
 
 fn pil_picmlx_connect(board: u32, address:String, port: u32, timeout: u32)
-    -> Result<c_long,u32> {
+    -> Result<c_long,PicmlxError> {
     let c_address = CString::new(address)
         .expect("Unable to create CString from specified address");
     let mut sid:c_long = 0;
@@ -71,16 +89,16 @@ fn pil_picmlx_connect(board: u32, address:String, port: u32, timeout: u32)
     if err_code == 0 {
         Ok(sid)
     } else {
-        Err(err_code)
+        Err(PicmlxError { err_num: err_code})
     }
 }
 
-fn pil_picmlx_disconnect (sid:c_long) -> Result<(),u32> {
+fn pil_picmlx_disconnect (sid:c_long) -> Result<(),PicmlxError> {
     let err_code = unsafe { PICMLX_Disconnect(sid) };
     if err_code == 0 {
         Ok(())
     } else {
-        Err(err_code)
+        Err(PicmlxError { err_num: err_code})
     }
 }
 
@@ -171,9 +189,6 @@ fn main() {
                                  LXI_PORT,3000)
         .unwrap_or_else(|err|{
             eprintln!("LXI Connect returned error {}",err);
-            let err_msg = pil_picmlx_error_code_to_message(err)
-                .expect("Unable to get PICMLX error message from code");
-            eprintln!("Error message: {}",err_msg);
             process::exit(1);
         });
     println!("Got Session: {}",sid);
