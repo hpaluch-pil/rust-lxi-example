@@ -13,6 +13,8 @@ Status:
 
 TODO:
 - use anyhow crate for better error handling...
+- avoid `System::exit(1)` so session or card will be clsoed
+  when going out of scope...
 
 ## Setup
 
