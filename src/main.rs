@@ -1,11 +1,12 @@
+extern crate anyhow;
 extern crate clap;
 
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::os::raw::{c_char,c_long};
-use std::process;
 
 use clap::Parser;
+//use anyhow::Context; // can't use for single borrow data...
 
 #[derive(Parser, Debug)]
 #[clap(author="Henryk Paluch of Pickering Interfaces Ltd.",
@@ -75,6 +76,9 @@ struct PicmlxError {
     err_num: u32,
 }
 
+// required by anyhow
+impl std::error::Error for PicmlxError {}
+
 impl fmt::Display for PicmlxError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f,"PICMLX{}: ",self.err_num)?;
@@ -93,11 +97,11 @@ struct PicmlxHandle {
 
 impl Drop for PicmlxHandle {
     fn drop(&mut self) {
-        println!("Closing session `{:?}`!", self);
+        println!("Cleanup: Closing session `{:?}`...", self);
         pil_picmlx_disconnect(self.sid).unwrap_or_else(|err|{
-            eprintln!("LXI Disconnect returned error {}",err);
+            eprintln!("Cleanup: ERROR: LXI Disconnect returned error {}",err);
         });
-        println!("Done. Session {} closed.",self.sid);
+        println!("Cleanup: Done. Session {} closed.",self.sid);
     }
 }
 
@@ -157,6 +161,8 @@ fn pil_picmlx_error_code_to_message(error_code:u32) -> Result<String,u32> {
 struct PiplxError {
     err_num: u32,
 }
+// required by anyhow
+impl std::error::Error for PiplxError {}
 
 impl fmt::Display for PiplxError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -177,14 +183,13 @@ struct PiplxHandle<'a> {
 
 impl<'a> Drop for PiplxHandle<'a> {
     fn drop(&mut self) {
-        println!("Closing card `{:?}`...", self);
+        println!("Cleanup: Closing card `{:?}`...", self);
         pil_piplx_close_specified_card(self.picmlx_handle, self.card_num).unwrap_or_else(|err| {
-            eprintln!("Error closing card: {}", err);
+            eprintln!("Cleanup: Error closing card: {}", err);
         });
-        println!("Done. Card with CardNum={} closed.",self.card_num);
+        println!("Cleanup: Done. Card with CardNum={} closed.",self.card_num);
     }
 }
-
 
 // fn PIPLX_OpenSpecifiedCard(sid:c_long,bus:u32,slot:u32,card_num:*mut u32) -> u32;
 fn pil_piplx_open_specified_card(picmlx_handle: &PicmlxHandle,bus:u32,slot:u32)
@@ -248,8 +253,7 @@ fn pil_piplx_error_code_to_message(error_code:u32) -> Result<String,u32> {
     Ok(err_msg)
 }
 
-
-fn main() {
+fn main() -> anyhow::Result<()> {
     let lxi_app_args = LxiAppArgs::parse();
     const LXI_PORT: u32 = 1024;
 
@@ -271,26 +275,17 @@ fn main() {
     // created block to close card/session before exiting main
     {
         let picmlx_handle = pil_picmlx_connect(0, lxi_app_args.lxi_address,
-                                               LXI_PORT, 3000)
-            .unwrap_or_else(|err| {
-                eprintln!("LXI Connect returned error {}", err);
-                process::exit(1);
-            });
+                                               LXI_PORT, 3000)?;
         println!("Got Session: {}", picmlx_handle.sid);
         println!("Opening Card at Bus={} Slot={}",
                  lxi_app_args.card_bus, lxi_app_args.card_slot);
         let piplx_handle = pil_piplx_open_specified_card(
-            &picmlx_handle, lxi_app_args.card_bus, lxi_app_args.card_slot).unwrap_or_else(|err| {
-            eprintln!("Unable to open card: {}", err);
-            process::exit(1);
-        });
+            &picmlx_handle, lxi_app_args.card_bus, lxi_app_args.card_slot)?;
         println!("Got CardNum={}", piplx_handle.card_num);
-        let card_id = pil_piplx_card_id(&picmlx_handle, &piplx_handle);
-        if card_id.is_ok() {
-            println!("Card ID is '{}'", card_id.unwrap());
-        } else {
-            eprintln!("Error {} getting card id", card_id.unwrap_err());
-        }
+        let card_id = pil_piplx_card_id(&picmlx_handle, &piplx_handle)?;
+        println!("Card ID is '{}'", card_id);
     }
-    println!("Done, exiting...")
+    println!("Done, exiting...");
+
+    Ok(())
 }

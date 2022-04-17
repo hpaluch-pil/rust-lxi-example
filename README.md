@@ -10,11 +10,7 @@ Status:
   - we use [Drp Trait](https://doc.rust-lang.org/std/ops/trait.Drop.html) to:
     - closes Card
     - disconnects LXI
-
-TODO:
-- use anyhow crate for better error handling...
-- avoid `System::exit(1)` so session or card will be clsoed
-  when going out of scope...
+- uses [anyhow](https://rust-cli.github.io/book/tutorial/errors.html#providing-context) crate for better error handling...
 
 ## Setup
 
@@ -70,12 +66,14 @@ Program version: 64-bit Debug
 Picmlx Raw Version is: 1183
 Picmlx Ex Version: PicmlxVersionInfo { major: 1, minor: 18, patch: 3 }
 Connecting to LXI on 192.168.56.101:1024...
-Got Session: 30112
+Got Session: 10857
 Opening Card at Bus=1 Slot=15
 Got CardNum=1
 Card ID is '40-160-001,1000000,1.01'
-Closing card with CardNum=1
-Disconnecting from LXI...
+Cleanup: Closing card `PiplxHandle { card_num: 1, picmlx_handle: PicmlxHandle { sid: 10857 } }`...
+Cleanup: Done. Card with CardNum=1 closed.
+Cleanup: Closing session `PicmlxHandle { sid: 10857 }`...
+Cleanup: Done. Session 10857 closed.
 Done, exiting...
 ```
 
