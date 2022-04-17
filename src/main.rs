@@ -86,13 +86,28 @@ impl fmt::Display for PicmlxError {
     }
 }
 
+#[derive(Debug)]
+struct PicmlxHandle {
+    sid: c_long,
+}
+
+impl Drop for PicmlxHandle {
+    fn drop(&mut self) {
+        println!("Closing session `{:?}`!", self);
+        pil_picmlx_disconnect(self.sid).unwrap_or_else(|err|{
+            eprintln!("LXI Disconnect returned error {}",err);
+        });
+        println!("Done. Session {} closed.",self.sid);
+    }
+}
+
 // Wrapper for DWORD PICMLX_API PICMLX_GetVersion(void);
 fn pil_picmlx_get_version() -> u32 {
     unsafe { PICMLX_GetVersion() }
 }
 
 fn pil_picmlx_connect(board: u32, address:String, port: u32, timeout: u32)
-    -> Result<c_long,PicmlxError> {
+    -> Result<PicmlxHandle,PicmlxError> {
     let c_address = CString::new(address)
         .expect("Unable to create CString from specified address");
     let mut sid:c_long = 0;
@@ -101,7 +116,7 @@ fn pil_picmlx_connect(board: u32, address:String, port: u32, timeout: u32)
         PICMLX_Connect(board, c_address.as_ptr(), port,
                                   timeout, &mut sid) };
     match err_code {
-        0 => Ok(sid),
+        0 => Ok(PicmlxHandle { sid}),
         err => Err(PicmlxError { err_num: err})
     }
 }
@@ -154,31 +169,50 @@ impl fmt::Display for PiplxError {
     }
 }
 
+#[derive(Debug)]
+struct PiplxHandle<'a> {
+    card_num: u32,
+    picmlx_handle: &'a PicmlxHandle,
+}
+
+impl<'a> Drop for PiplxHandle<'a> {
+    fn drop(&mut self) {
+        println!("Closing card `{:?}`...", self);
+        pil_piplx_close_specified_card(self.picmlx_handle, self.card_num).unwrap_or_else(|err| {
+            eprintln!("Error closing card: {}", err);
+        });
+        println!("Done. Card with CardNum={} closed.",self.card_num);
+    }
+}
+
+
 // fn PIPLX_OpenSpecifiedCard(sid:c_long,bus:u32,slot:u32,card_num:*mut u32) -> u32;
-fn pil_piplx_open_specified_card(sid:c_long,bus:u32,slot:u32) -> Result<u32,PiplxError> {
+fn pil_piplx_open_specified_card(picmlx_handle: &PicmlxHandle,bus:u32,slot:u32)
+    -> Result<PiplxHandle,PiplxError> {
     let mut card_num:u32 = 0;
-    let err_code = unsafe { PIPLX_OpenSpecifiedCard(sid,bus,slot,&mut card_num) } ;
+    let err_code = unsafe { PIPLX_OpenSpecifiedCard(picmlx_handle.sid,bus,slot,&mut card_num) } ;
     match err_code {
-        0 => Ok(card_num),
+        0 => Ok(PiplxHandle{
+            picmlx_handle: &picmlx_handle, card_num: card_num  }),
         err => Err(PiplxError { err_num: err})
     }
 }
 
 // fn PIPLX_CloseSpecifiedCard(sid:c_long,card_num:u32) -> u32;
-fn pil_piplx_close_specified_card(sid:c_long,card_num:u32) -> Result<(),PiplxError> {
-    let err_code = unsafe { PIPLX_CloseSpecifiedCard(sid,card_num) };
+fn pil_piplx_close_specified_card(picmlx_handle: &PicmlxHandle,card_num:u32) -> Result<(),PiplxError> {
+    let err_code = unsafe { PIPLX_CloseSpecifiedCard(picmlx_handle.sid,card_num) };
     match err_code {
         0 => Ok(()),
         err => Err(PiplxError { err_num: err})
     }
 }
 
-fn pil_piplx_card_id(sid:c_long,card_num:u32) -> Result<String,PiplxError> {
+fn pil_piplx_card_id(picmlx_handle: &PicmlxHandle,piplx_handle: &PiplxHandle) -> Result<String,PiplxError> {
     // output string handling from:
     // dns-lookup-master\src\hostname.rs
     let mut c_name = [0 as c_char; 256 as usize];
     let res = unsafe {
-        PIPLX_CardId(sid,card_num,c_name.as_mut_ptr(), c_name.len() as _)
+        PIPLX_CardId(picmlx_handle.sid,piplx_handle.card_num,c_name.as_mut_ptr(), c_name.len() as _)
     };
     if res != 0 {
         return Err(PiplxError{err_num:res});
@@ -234,34 +268,29 @@ fn main() {
     println!("Picmlx Ex Version: {:?}",picmlx_ex_ver);
     println!("Connecting to LXI on {}:{}...",lxi_app_args.lxi_address,LXI_PORT);
 
-    let sid = pil_picmlx_connect(0,lxi_app_args.lxi_address,
-                                 LXI_PORT,3000)
-        .unwrap_or_else(|err|{
-            eprintln!("LXI Connect returned error {}",err);
+    // created block to close card/session before exiting main
+    {
+        let picmlx_handle = pil_picmlx_connect(0, lxi_app_args.lxi_address,
+                                               LXI_PORT, 3000)
+            .unwrap_or_else(|err| {
+                eprintln!("LXI Connect returned error {}", err);
+                process::exit(1);
+            });
+        println!("Got Session: {}", picmlx_handle.sid);
+        println!("Opening Card at Bus={} Slot={}",
+                 lxi_app_args.card_bus, lxi_app_args.card_slot);
+        let piplx_handle = pil_piplx_open_specified_card(
+            &picmlx_handle, lxi_app_args.card_bus, lxi_app_args.card_slot).unwrap_or_else(|err| {
+            eprintln!("Unable to open card: {}", err);
             process::exit(1);
         });
-    println!("Got Session: {}",sid);
-    println!("Opening Card at Bus={} Slot={}",
-             lxi_app_args.card_bus,lxi_app_args.card_slot);
-    let card_num = pil_piplx_open_specified_card(
-        sid,lxi_app_args.card_bus,lxi_app_args.card_slot).unwrap_or_else(|err|{
-        eprintln!("Unable to open card: {}",err);
-        process::exit(1);
-    });
-    println!("Got CardNum={}",card_num);
-    let card_id = pil_piplx_card_id(sid,card_num);
-    if card_id.is_ok() {
-        println!("Card ID is '{}'", card_id.unwrap());
-    } else {
-        eprintln!("Error {} getting card id",card_id.unwrap_err());
+        println!("Got CardNum={}", piplx_handle.card_num);
+        let card_id = pil_piplx_card_id(&picmlx_handle, &piplx_handle);
+        if card_id.is_ok() {
+            println!("Card ID is '{}'", card_id.unwrap());
+        } else {
+            eprintln!("Error {} getting card id", card_id.unwrap_err());
+        }
     }
-    println!("Closing card with CardNum={}",card_num);
-    pil_piplx_close_specified_card(sid,card_num).unwrap_or_else(|err|{
-        eprintln!("Error closing card: {}",err);
-    });
-    println!("Disconnecting from LXI...");
-    pil_picmlx_disconnect(sid).unwrap_or_else(|err|{
-        eprintln!("LXI Disconnect returned error {}",err);
-    });
     println!("Done, exiting...")
 }

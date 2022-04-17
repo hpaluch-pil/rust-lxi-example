@@ -7,11 +7,14 @@ Status:
   - connects to LXI
   - opens specified card
   - prints Card ID
-  - closes Card
-  - disconnects LXI
+  - we use [Drp Trait](https://doc.rust-lang.org/std/ops/trait.Drop.html) to:
+    - closes Card
+    - disconnects LXI
 
 TODO:
-- test autoclosing (Drop)
+- use anyhow crate for better error handling...
+- avoid `System::exit(1)` so session or card will be clsoed
+  when going out of scope...
 
 ## Setup
 
