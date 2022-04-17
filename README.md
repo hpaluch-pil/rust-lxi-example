@@ -131,18 +131,20 @@ cargo run -- -l IP_OF_LXI_SIMULATOR -b 1 -s 15
 Example output:
 ```
 cargo run -- -l 192.168.100.192 -b 1 -s 15
-    Finished dev [unoptimized + debuginfo] target(s) in 0.04s
+   Finished dev [unoptimized + debuginfo] target(s) in 0.05s
      Running `target/debug/rust-lxi-example -l 192.168.100.192 -b 1 -s 15`
 Program version: 64-bit Debug
 Picmlx Raw Version is: 1131
 Picmlx Ex Version: PicmlxVersionInfo { major: 1, minor: 13, patch: 1 }
 Connecting to LXI on 192.168.100.192:1024...
-Got Session: 798931329
+Got Session: 1512903700
 Opening Card at Bus=1 Slot=15
 Got CardNum=1
 Card ID is '40-160-001,1000000,1.01'
-Closing card with CardNum=1
-Disconnecting from LXI...
+Cleanup: Closing card `PiplxHandle { card_num: 1, picmlx_handle: PicmlxHandle { sid: 1512903700 } }`...
+Cleanup: Done. Card with CardNum=1 closed.
+Cleanup: Closing session `PicmlxHandle { sid: 1512903700 }`...
+Cleanup: Done. Session 1512903700 closed.
 Done, exiting...
 ```
 
