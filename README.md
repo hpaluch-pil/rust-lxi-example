@@ -8,8 +8,8 @@ Status:
   - opens specified card
   - prints Card ID
   - we use [Drp Trait](https://doc.rust-lang.org/std/ops/trait.Drop.html) to:
-    - closes Card
-    - disconnects LXI
+    - close Card
+    - disconnect LXI
 - uses [anyhow](https://rust-cli.github.io/book/tutorial/errors.html#providing-context) crate for better error handling...
 
 ## Setup
