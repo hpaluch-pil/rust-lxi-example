@@ -10,7 +10,12 @@ Status:
   - we use [Drp Trait](https://doc.rust-lang.org/std/ops/trait.Drop.html) to:
     - close Card
     - disconnect LXI
-- uses [anyhow](https://rust-cli.github.io/book/tutorial/errors.html#providing-context) crate for better error handling...
+- uses [anyhow](https://rust-cli.github.io/book/tutorial/errors.html#providing-context) crate for
+  better error handling...
+  - also there is alternative `error-chain` (deprecated?)
+    - https://rust-lang-nursery.github.io/rust-cookbook/about.html#a-note-about-error-handling
+- internals using buffers for C calls:
+  - https://github.com/rust-lang/rust/blob/master/library/std/src/sys/unix/os.rs
 
 ## Setup
 
