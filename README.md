@@ -115,16 +115,25 @@ sudo zypper in cargo
 ```
 
 - install ClientBridge/C++ library for Linux:
-  - Download latest ClientBridge for Linux from (used "RedHat" for OpenSUSE):
-  - https://downloads.pickeringtest.info/downloads/drivers/Sys60/Linux/ClientBridge/RedHat/
+  - Download latest ClientBridge for Linux from (used "Debian" for OpenSUSE - more up to date than RedHat versions):
+  - https://downloads.pickeringtest.info/downloads/drivers/Sys60/Linux/ClientBridge/Debian/
   - unpack downloaded version and create necessary symlinks, for example:
 
     ```bash
-    sudo tar -xvz -C / -f ClientBridge-1.20.0.3-amd64_rhel.tar.gz ./usr/lib64
-    cd /usr/lib64/
-    sudo ln -s libpicmlx.so.1.13.1 libpicmlx.so
-    sudo ln -s libpiplx.so.1.10.0 libpiplx.so
+    cd
+    curl -fLO https://downloads.pickeringtest.info/downloads/drivers/Sys60/Linux/ClientBridge/\
+    Debian/ClientBridge-1.64.0.0-amd64_deb.tar.gz
+    tar xvzf ClientBridge-1.64.0.0-amd64_deb.tar.gz ./usr/lib
+    sudo cp usr/lib/libpi*.so* /usr/local/lib/64
+    cd /usr/local/lib64/
+    sudo ln -s libpicmlx.so.1.18.2 libpicmlx.so
+    sudo ln -s libpiplx.so.1.17.1 libpiplx.so
     ```
+WARNING! It is less than ideal to (mis)use Debian builds
+for openSUSE but we have no binary packages for SUSE yet.
+Here we prefere Debian builds over Redhat builds because
+they are up-to-date.
+
 
 Now back in this project directory use
 command `cargo build` to build example binary
