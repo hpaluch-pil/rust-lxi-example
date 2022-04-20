@@ -110,6 +110,14 @@ fn pil_picmlx_get_version() -> u32 {
     unsafe { PICMLX_GetVersion() }
 }
 
+fn picmlx_error_wrapper(err_code: u32) -> Result<(),PicmlxError> {
+    if err_code != 0 {
+        Err(PicmlxError { err_num: err_code})
+    } else {
+        Ok(())
+    }
+}
+
 fn pil_picmlx_connect(board: u32, address:String, port: u32, timeout: u32)
     -> Result<PicmlxHandle,PicmlxError> {
     let c_address = CString::new(address)
@@ -119,18 +127,14 @@ fn pil_picmlx_connect(board: u32, address:String, port: u32, timeout: u32)
     let err_code = unsafe {
         PICMLX_Connect(board, c_address.as_ptr(), port,
                                   timeout, &mut sid) };
-    match err_code {
-        0 => Ok(PicmlxHandle { sid}),
-        err => Err(PicmlxError { err_num: err})
-    }
+    picmlx_error_wrapper(err_code)?;
+    Ok(PicmlxHandle { sid})
 }
 
 fn pil_picmlx_disconnect (sid:c_long) -> Result<(),PicmlxError> {
     let err_code = unsafe { PICMLX_Disconnect(sid) };
-    match err_code {
-        0 => Ok(()),
-        err => Err(PicmlxError { err_num: err})
-    }
+    picmlx_error_wrapper(err_code)?;
+    Ok(())
 }
 
 // Wrapper for:
@@ -191,25 +195,28 @@ impl<'a> Drop for PiplxHandle<'a> {
     }
 }
 
+fn piplx_error_wrapper(err_code: u32) -> Result<(),PiplxError> {
+    if err_code != 0 {
+        Err(PiplxError { err_num: err_code})
+    } else {
+        Ok(())
+    }
+}
+
 // fn PIPLX_OpenSpecifiedCard(sid:c_long,bus:u32,slot:u32,card_num:*mut u32) -> u32;
 fn pil_piplx_open_specified_card(picmlx_handle: &PicmlxHandle,bus:u32,slot:u32)
     -> Result<PiplxHandle,PiplxError> {
     let mut card_num:u32 = 0;
     let err_code = unsafe { PIPLX_OpenSpecifiedCard(picmlx_handle.sid,bus,slot,&mut card_num) } ;
-    match err_code {
-        0 => Ok(PiplxHandle{
-            picmlx_handle: &picmlx_handle, card_num: card_num  }),
-        err => Err(PiplxError { err_num: err})
-    }
+    piplx_error_wrapper(err_code)?;
+    Ok(PiplxHandle{ picmlx_handle: &picmlx_handle, card_num: card_num  })
 }
 
 // fn PIPLX_CloseSpecifiedCard(sid:c_long,card_num:u32) -> u32;
 fn pil_piplx_close_specified_card(picmlx_handle: &PicmlxHandle,card_num:u32) -> Result<(),PiplxError> {
     let err_code = unsafe { PIPLX_CloseSpecifiedCard(picmlx_handle.sid,card_num) };
-    match err_code {
-        0 => Ok(()),
-        err => Err(PiplxError { err_num: err})
-    }
+    piplx_error_wrapper(err_code)?;
+    Ok(())
 }
 
 fn pil_piplx_card_id(picmlx_handle: &PicmlxHandle,piplx_handle: &PiplxHandle) -> Result<String,PiplxError> {
@@ -219,9 +226,8 @@ fn pil_piplx_card_id(picmlx_handle: &PicmlxHandle,piplx_handle: &PiplxHandle) ->
     let res = unsafe {
         PIPLX_CardId(picmlx_handle.sid,piplx_handle.card_num,c_name.as_mut_ptr(), c_name.len() as _)
     };
-    if res != 0 {
-        return Err(PiplxError{err_num:res});
-    }
+    piplx_error_wrapper(res)?;
+
     let card_id = unsafe {
         CStr::from_ptr(c_name.as_ptr())
     };
@@ -242,6 +248,7 @@ fn pil_piplx_error_code_to_message(error_code:u32) -> Result<String,u32> {
         PIPLX_ErrorCodeToMessage(error_code,
                                   c_name.as_mut_ptr(), c_name.len() as u32)
     };
+    // println!("error_code='{}', res='{}' cname={:?}",error_code,res,c_name);
     if res != 0 {
         return Err(res);
     }
