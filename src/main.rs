@@ -23,10 +23,10 @@ struct LxiAppArgs {
     card_slot: u32,
 }
 
-// C structure returned by PICMLX_GetVersionEx()
+// C structure returned by PICMLX_GetVersionEx() and PIPLX_GetVersionEx()
 #[repr(C)]
-#[derive(Clone,Debug)]
-struct PicmlxVersionInfo {
+#[derive(Clone,Copy,Debug)]
+struct CbVersionInfo {
     major:u32,
     minor:u32,
     patch:u32,
@@ -43,7 +43,7 @@ extern "C" {
     // DWORD PICMLX_API PICMLX_GetVersion(void);
     fn PICMLX_GetVersion() -> u32;
     // VERSION_INFO PICMLX_API PICMLX_GetVersionEx();
-    fn PICMLX_GetVersionEx() -> PicmlxVersionInfo;
+    fn PICMLX_GetVersionEx() -> CbVersionInfo;
 
     // DWORD PICMLX_API PICMLX_Connect(DWORD Board,const LPCHAR Address,DWORD Port,DWORD Timeout,LPSESSION SID);
     fn PICMLX_Connect(board: u32, address: *const c_char, port: u32,
@@ -60,6 +60,10 @@ extern "C" {
     // Run Time
     // C:\Windows\System32\Piplx_w64.dll
 
+    // DWORD PIPLX_API PIPLX_GetVersion(void);
+    fn PIPLX_GetVersion() -> u32;
+    // VERSION_INFO PIPLX_API PIPLX_GetVersionEx();
+    fn PIPLX_GetVersionEx() -> CbVersionInfo;
     // DWORD PIPLX_API PIPLX_OpenSpecifiedCard(SESSION Sid,DWORD Bus,DWORD Slot,DWORD *CardNum);
     fn PIPLX_OpenSpecifiedCard(sid:c_long,bus:u32,slot:u32,card_num:*mut u32) -> u32;
     // DWORD PIPLX_API PIPLX_CloseSpecifiedCard(SESSION Sid,DWORD CardNum);
@@ -103,11 +107,6 @@ impl Drop for PicmlxHandle {
         });
         println!("Cleanup: Done. Session {} closed.",self.sid);
     }
-}
-
-// Wrapper for DWORD PICMLX_API PICMLX_GetVersion(void);
-fn pil_picmlx_get_version() -> u32 {
-    unsafe { PICMLX_GetVersion() }
 }
 
 fn picmlx_error_wrapper(err_code: u32) -> Result<(),PicmlxError> {
@@ -273,12 +272,17 @@ fn main() -> anyhow::Result<()> {
 
     // sizeof pointer from: https://stackoverflow.com/a/64982586
     println!("Program version: {}-bit {}",8*std::mem::size_of::<*const u32>(),build_type);
-    let picmlx_ver = pil_picmlx_get_version();
+    let picmlx_ver = unsafe { PICMLX_GetVersion() };
     println!("Picmlx Raw Version is: {}",picmlx_ver);
     let picmlx_ex_ver = unsafe {  PICMLX_GetVersionEx() };
     println!("Picmlx Ex Version: {:?}",picmlx_ex_ver);
-    println!("Connecting to LXI on {}:{}...",lxi_app_args.lxi_address,LXI_PORT);
 
+    let piplx_ver = unsafe { PIPLX_GetVersion() };
+    println!("Piplx Raw Version is: {}",piplx_ver);
+    let piplx_ex_ver = unsafe {  PIPLX_GetVersionEx() };
+    println!("Piplx Ex Version: {:?}",piplx_ex_ver);
+
+    println!("Connecting to LXI on {}:{}...",lxi_app_args.lxi_address,LXI_PORT);
     // created block to close card/session before exiting main
     {
         let picmlx_handle = pil_picmlx_connect(0, lxi_app_args.lxi_address,
