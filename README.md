@@ -7,7 +7,7 @@ Status:
   - connects to LXI
   - opens specified card
   - prints Card ID
-  - we use [Drp Trait](https://doc.rust-lang.org/std/ops/trait.Drop.html) to:
+  - we use [Drop Trait](https://doc.rust-lang.org/std/ops/trait.Drop.html) to:
     - close Card
     - disconnect LXI
 - uses [anyhow](https://rust-cli.github.io/book/tutorial/errors.html#providing-context) crate for
@@ -53,7 +53,7 @@ cargo 1.60.0 (d1fd9fe2c 2022-03-01)
 Open CMD and issue these commands:
 
 ```cmd
-rem if build failes with weird w2_sock32.lib error try this:
+rem if build fails with weird w2_sock32.lib error try this:
 "c:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvars64.bat"
 
 rem build command
@@ -133,7 +133,7 @@ sudo zypper in cargo
     ```
 WARNING! It is less than ideal to (mis)use Debian builds
 for openSUSE but we have no binary packages for SUSE yet.
-Here we prefere Debian builds over Redhat builds because
+Here we prefer Debian builds over Redhat builds because
 they are up-to-date.
 
 
